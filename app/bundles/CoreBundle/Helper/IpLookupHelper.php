@@ -138,7 +138,7 @@ class IpLookupHelper
             //assume local as the ip is empty
             $ip = '127.0.0.1';
         }
-
+        $ip = '159.97.197.191';
         if (empty($ipAddresses[$ip])) {
             $repo      = $this->em->getRepository('MauticCoreBundle:IpAddress');
             $ipAddress = $repo->findOneByIpAddress($ip);
@@ -146,6 +146,21 @@ class IpLookupHelper
 
             if ($ipAddress === null) {
                 $ipAddress = new IpAddress();
+                $details   = $ipAddress->getIpDetails();
+                if ($ipAddress->isTrackable() && empty($details['city'])) {
+                    // Get the IP lookup service
+
+                    // Fetch the data
+                    if ($this->ipLookup) {
+                        $details = $this->ipLookup->setIpAddress($ip)
+                            ->getDetails();
+
+                        $ipAddress->setIpDetails($details);
+
+                        // Save new details
+                        $saveIp = true;
+                    }
+                }
                 if ($this->coreParametersHelper->getParameter('anonymize_ip')) {
                     $ip = preg_replace(['/\.\d*$/', '/[\da-f]*:[\da-f]*$/'], ['.***', '****:****'], $ip);
                 }
@@ -181,22 +196,6 @@ class IpLookupHelper
                         $ipAddress->setDoNotTrackList($doNotTrack);
                         continue;
                     }
-                }
-            }
-
-            $details = $ipAddress->getIpDetails();
-            if ($ipAddress->isTrackable() && empty($details['city'])) {
-                // Get the IP lookup service
-
-                // Fetch the data
-                if ($this->ipLookup) {
-                    $details = $this->ipLookup->setIpAddress($ip)
-                        ->getDetails();
-
-                    $ipAddress->setIpDetails($details);
-
-                    // Save new details
-                    $saveIp = true;
                 }
             }
 
